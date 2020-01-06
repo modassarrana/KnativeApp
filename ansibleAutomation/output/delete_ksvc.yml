@@ -1,0 +1,42 @@
+- name: Check virtual service exists for the application
+  shell: "kubectl get vs ping-virtualservice -n default"
+  register: r
+  ignore_errors: true
+
+- name: Delete all virtual service for default namespace
+  shell: "kubectl delete vs ping-virtualservice -n default"
+  when: 
+    - r.rc == 0
+    - r.stderr == ""
+
+- name: Check kantive service exists 
+  shell: "kubectl get ksvc ping-service -n default"
+  register: ret
+  ignore_errors: true
+
+- name: Delete all knative services for default namespaces
+  shell: "kubectl delete ksvc ping-service -n default"
+  when: 
+    - ret.rc == 0
+    - ret.stderr == ""
+- name: Check virtual service exists for the application
+  shell: "kubectl get vs getuptime-virtualservice -n default"
+  register: r
+  ignore_errors: true
+
+- name: Delete all virtual service for default namespace
+  shell: "kubectl delete vs getuptime-virtualservice -n default"
+  when: 
+    - r.rc == 0
+    - r.stderr == ""
+
+- name: Check kantive service exists 
+  shell: "kubectl get ksvc getuptime-service -n default"
+  register: ret
+  ignore_errors: true
+
+- name: Delete all knative services for default namespaces
+  shell: "kubectl delete ksvc getuptime-service -n default"
+  when: 
+    - ret.rc == 0
+    - ret.stderr == ""

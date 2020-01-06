@@ -1,0 +1,157 @@
+- name: copy the content of application in temporrary file to use while rendering
+  copy: 
+    content: '{"app_url": "/ping", "app_name": "ping", "package": ["flask"], "app_docker_image": "checkpingconn", "docker_tag": "v1", "description": "Knative application details"}'
+    dest: "/tmp/app_detail.json"
+
+- include_vars: "/tmp/app_detail.json"
+
+- name: create knative application folder
+  file:
+    path: "~/app/ping"
+    state: directory
+    mode: 0777
+    recurse: yes
+
+- name: move user function to ~/app/ping
+  copy:
+    src: '/home/centos/FAAS/ansibleAutomation/roles/knative-app-deploy/../../utilities/app/ping/ping.py'
+    dest: "~/app/ping/ping.py"
+
+- name: List down all the packages in requirement.txt required as part of your application
+  template:
+    src: 'templates/requirements.j2'
+    dest: "~/app/ping/requirements.txt"
+    mode: '0755'
+
+- name: Generate docker file for application by using docker Jinja
+  template:
+    src: 'templates/dockerfile.j2'
+    dest: "~/app/ping/Dockerfile"
+    mode: '0755'
+
+- name: build docker image for knative application
+  shell: "docker build --network=host -t clna-prototype-docker.apro.nbnco.net.au/checkpingconn:v1 ."
+  args:
+    chdir: "~/app/ping/"
+  register: r
+
+- name: push docker image to artifactory repository
+  shell: "docker push clna-prototype-docker.apro.nbnco.net.au/checkpingconn:v1"
+  register: p
+  when: r.rc == 0
+
+- name: create service for knative application
+  template:
+    src: 'templates/service.yml'
+    dest: "~/app/ping/service.yaml"
+    mode: '0755'
+  register: ksvc
+
+- name: create virtualservice for knative application
+  template:
+    src: 'templates/virtualService.yml'
+    dest: "~/app/ping/virtualService.yaml"
+    mode: '0755'
+  register: vs
+
+- name: apply Knative service & virtual service
+  shell: "kubectl apply -f ~/app/ping/service.yaml" 
+
+- shell: "kubectl apply -f ~/app/ping/virtualService.yaml"
+
+- pause: seconds=30
+
+- name: check Knative service has come up
+  shell: "kubectl get ksvc -n default | grep ping | awk -F' ' '{print $5}'"
+  register: ret
+  until: ret.stdout == "True"
+  retries: 5
+  delay: 10
+  ignore_errors: true
+
+- name: failed custom message if above tasks ret is not true
+  shell: "kubectl get ksvc -n default | grep ping | awk -F' ' '{print $3}'"
+  register: status
+  failed_when: ret.stdout != "True"
+
+- name: copy the content of application in temporrary file to use while rendering
+  copy: 
+    content: '{"app_url": "/uptime", "app_name": "getuptime", "package": ["flask", "pysnmp"], "app_docker_image": "snmpuptime", "docker_tag": "v1", "description": "Knative application details"}'
+    dest: "/tmp/app_detail.json"
+
+- include_vars: "/tmp/app_detail.json"
+
+- name: create knative application folder
+  file:
+    path: "~/app/getuptime"
+    state: directory
+    mode: 0777
+    recurse: yes
+
+- name: move user function to ~/app/getuptime
+  copy:
+    src: '/home/centos/FAAS/ansibleAutomation/roles/knative-app-deploy/../../utilities/app/getuptime/getuptime.py'
+    dest: "~/app/getuptime/getuptime.py"
+
+- name: List down all the packages in requirement.txt required as part of your application
+  template:
+    src: 'templates/requirements.j2'
+    dest: "~/app/getuptime/requirements.txt"
+    mode: '0755'
+
+- name: Generate docker file for application by using docker Jinja
+  template:
+    src: 'templates/dockerfile.j2'
+    dest: "~/app/getuptime/Dockerfile"
+    mode: '0755'
+
+- name: build docker image for knative application
+  shell: "docker build --network=host -t clna-prototype-docker.apro.nbnco.net.au/snmpuptime:v1 ."
+  args:
+    chdir: "~/app/getuptime/"
+  register: r
+
+- name: push docker image to artifactory repository
+  shell: "docker push clna-prototype-docker.apro.nbnco.net.au/snmpuptime:v1"
+  register: p
+  when: r.rc == 0
+
+- name: create service for knative application
+  template:
+    src: 'templates/service.yml'
+    dest: "~/app/getuptime/service.yaml"
+    mode: '0755'
+  register: ksvc
+
+- name: create virtualservice for knative application
+  template:
+    src: 'templates/virtualService.yml'
+    dest: "~/app/getuptime/virtualService.yaml"
+    mode: '0755'
+  register: vs
+
+- name: apply Knative service & virtual service
+  shell: "kubectl apply -f ~/app/getuptime/service.yaml" 
+
+- shell: "kubectl apply -f ~/app/getuptime/virtualService.yaml"
+
+- pause: seconds=30
+
+- name: check Knative service has come up
+  shell: "kubectl get ksvc -n default | grep getuptime | awk -F' ' '{print $5}'"
+  register: ret
+  until: ret.stdout == "True"
+  retries: 5
+  delay: 10
+  ignore_errors: true
+
+- name: failed custom message if above tasks ret is not true
+  shell: "kubectl get ksvc -n default | grep getuptime | awk -F' ' '{print $3}'"
+  register: status
+  failed_when: ret.stdout != "True"
+
+- name: remove temporary app_detail file
+  file:
+    path: "/tmp/app_detail.json"
+    state: absent
+
